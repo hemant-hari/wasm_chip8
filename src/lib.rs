@@ -12,9 +12,13 @@ pub mod display;
 pub mod keyboard;
 
 pub mod chip8 {
-    use crate::display::{self, Display};
+    use rand::Rng;
+    use wasm_bindgen::prelude::*;
+
+    use crate::display::Display;
     use crate::keyboard::Keyboard;
 
+    #[wasm_bindgen]
     pub struct Cpu {
         i: u16,
         pc: u16,
@@ -27,6 +31,7 @@ pub mod chip8 {
         keyboard: Keyboard,
     }
 
+    #[wasm_bindgen]
     impl Cpu {
         pub fn new() -> Cpu {
             Cpu {
@@ -40,10 +45,6 @@ pub mod chip8 {
                 display: Display::new_empty(),
                 keyboard: Keyboard::new(),
             }
-        }
-
-        pub fn memory(&'static self) -> &'static [u8] {
-            &self.memory
         }
 
         fn run_opcode(&mut self, opcode: u16) {
@@ -75,6 +76,10 @@ pub mod chip8 {
                 [9, _, _, 0] if self.registers[x()] != self.registers[y()] => self.pc += 2,
                 [0xA, _, _, _] => self.i = nnn(),
                 [0xB, _, _, _] => self.pc = nnn() + self.registers[0] as u16,
+                [0xC, _, _, _] => self.registers[x()] = kk() & rand::thread_rng().gen_range(0, 0xFF),
+                [0xD, _, _, _] => return, //TODO
+                [0xE, _, 9, 0xE] if self.keyboard.key_is_pressed(x() as u8) => self.pc += 2,
+                [0xE, _, 0xA, 1] if !self.keyboard.key_is_pressed(x() as u8) => self.pc += 2,
                 _ => return,
             }
         }
@@ -100,23 +105,15 @@ pub mod chip8 {
         }
 
         fn safe_add_registers(&mut self, x: usize, y: usize) -> u8 {
-            let sum: u16 = self.registers[x] as u16 + self.registers[y] as u16;
-            if sum > 0xFF {
-                self.registers[0xF] = 1
-            }
-            sum as u8
+            let (res, overflow) = self.registers[x].overflowing_add(self.registers[y]);
+            self.registers[0xF] = overflow as u8;
+            res
         }
 
         fn safe_sub_registers(&mut self, first: usize, second: usize) -> u8 {
-            let reg_first = self.registers[first];
-            let reg_second = self.registers[second];
-            if reg_first > reg_second {
-                self.registers[0xF] = 1;
-                reg_first - reg_second
-            } else {
-                self.registers[0xF] = 0;
-                (0x100 + reg_first as u16 - reg_second as u16) as u8
-            }
+            let (res, overflow) = self.registers[first].overflowing_sub(self.registers[second]);
+            self.registers[0xF] = !overflow as u8;
+            res
         }
 
         fn halve(&mut self, x: usize) -> u8 {
@@ -428,6 +425,32 @@ pub mod chip8 {
             cpu.registers[0xC] = 0x12;
             cpu.run_opcode(0xCC00);
             assert_eq!(cpu.registers[0xC], 0);
+        }
+
+        //Dxyn
+        #[test]
+        fn it_displays_sprite(){
+
+        }
+
+        //Ex9E
+        #[test]
+        fn it_skips_instruction_if_key_pressed(){
+            let mut cpu = Cpu::new();
+            cpu.keyboard.set_key(0xC);
+            cpu.pc = 10;
+            cpu.run_opcode(0xEC9E);
+            assert_eq!(cpu.pc, 12);
+        }
+
+        //ExA1
+        #[test]
+        fn it_skips_instruction_if_key_not_pressed(){
+            let mut cpu = Cpu::new();
+            cpu.keyboard.set_key(0xB);
+            cpu.pc = 10;
+            cpu.run_opcode(0xECA1);
+            assert_eq!(cpu.pc, 12);
         }
     }
 }

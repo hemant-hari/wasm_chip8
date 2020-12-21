@@ -23,7 +23,7 @@ impl Keyboard {
         self.keys ^= 1 << key;
     }
 
-    pub fn key_pressed(&self, key: u8) -> bool {
+    pub fn key_is_pressed(&self, key: u8) -> bool {
         self.keys >> key & 1 != 0
     }
 }
@@ -36,43 +36,43 @@ mod keyboard_tests {
     fn it_gets_key_one() {
         let mut kb = Keyboard::new();
         kb.set_keys(0b0000_0001);
-        assert!(kb.key_pressed(0x0));
-        assert!(!kb.key_pressed(0x1));
+        assert!(kb.key_is_pressed(0x0));
+        assert!(!kb.key_is_pressed(0x1));
     }
 
     #[test]
     fn it_gets_key_f() {
         let mut kb = Keyboard::new();
         kb.set_keys(0b1000_0000_0000_0000);
-        assert!(kb.key_pressed(0xF));
-        assert!(!kb.key_pressed(0x1));
+        assert!(kb.key_is_pressed(0xF));
+        assert!(!kb.key_is_pressed(0x1));
     }
 
     #[test]
     fn it_sets_key_f() {
         let mut kb = Keyboard::new();
         kb.set_key(0xF);
-        assert!(kb.key_pressed(0xF));
-        assert!(!kb.key_pressed(0x1));
+        assert!(kb.key_is_pressed(0xF));
+        assert!(!kb.key_is_pressed(0x1));
     }
 
     #[test]
     fn it_unsets_key_f() {
         let mut kb = Keyboard::new();
         kb.set_key(0xF);
-        assert!(kb.key_pressed(0xF));
+        assert!(kb.key_is_pressed(0xF));
         kb.unset_key(0xF);
-        assert!(!kb.key_pressed(0xF));
+        assert!(!kb.key_is_pressed(0xF));
     }
 
     #[test]
     fn it_toggles_key_9() {
         let mut kb = Keyboard::new();
         kb.set_key(0x9);
-        assert!(kb.key_pressed(0x9));
+        assert!(kb.key_is_pressed(0x9));
         kb.toggle_key(0x9);
-        assert!(!kb.key_pressed(0x9));
+        assert!(!kb.key_is_pressed(0x9));
         kb.toggle_key(0x9);
-        assert!(kb.key_pressed(0x9));
+        assert!(kb.key_is_pressed(0x9));
     }
 }
