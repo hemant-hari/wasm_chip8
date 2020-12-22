@@ -1,15 +1,15 @@
-import { Display, Cell } from "wasm-chip8";
+import { Cpu, Pixel, Display } from "wasm-chip8";
 import { memory } from "wasm-chip8/wasm_chip8_bg";
 
-const CELL_SIZE = 20; // px
+const CELL_SIZE = 10; // px
 const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#333333";
 const ALIVE_COLOR = "#41FF00";
 
 // Construct the display, and get its width and height.
-const display = Display.new_empty();
-const width = display.width();
-const height = display.height();
+const chip8 = Display.new_default();
+const width = chip8.width();
+const height = chip8.height();
 
 // Give the canvas room for all of our cells and a 1px border
 // around each of them.
@@ -20,7 +20,7 @@ canvas.width = (CELL_SIZE + 1) * width + 1;
 const ctx = canvas.getContext('2d');
 
 const renderLoop = () => {
-  display.tick();
+  chip8.tick();
 
   drawGrid();
   drawCells();
@@ -52,7 +52,7 @@ const getIndex = (row, column) => {
 };
 
 const drawCells = () => {
-  const cellsPtr = display.cells();
+  const cellsPtr = chip8.pixels();
   const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
 
   ctx.beginPath();
@@ -61,7 +61,7 @@ const drawCells = () => {
     for (let col = 0; col < width; col++) {
       const idx = getIndex(row, col);
 
-      ctx.fillStyle = cells[idx] === Cell.Dead
+      ctx.fillStyle = cells[idx] === Pixel.Off
         ? DEAD_COLOR
         : ALIVE_COLOR;
 
