@@ -12,6 +12,7 @@ pub enum Pixel {
 }
 
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct Display {
     width: u32,
     height: u32,
@@ -87,18 +88,25 @@ impl Display {
         self.pixels[i]
     }
 
-    pub fn draw_bytes(&mut self, x: u8, y: u8, bytes: &[u8]) {
+    pub fn draw_bytes(&mut self, x: u8, y: u8, bytes: &[u8]) -> bool {
         let bits: Vec<[bool; 8]> = bytes.into_iter().map(Display::to_bool_array).collect();
-        for (i_y, pos_y) in  (y..(y + bytes.len() as u8)).enumerate() {
+        let mut collision_flag = false;
+
+        for (i_y, pos_y) in (y..(y + bytes.len() as u8)).enumerate() {
             for (i_x, pos_x) in (x..(x + 8)).enumerate() {
                 let idx = self.get_index(pos_y as u32 % self.height, pos_x as u32 % self.width);
-                self.pixels[idx] = match (self.pixels[idx] as u8) ^ (bits[i_y][i_x] as u8) {
-                    0 => Pixel::Off,
-                    1 => Pixel::On,
-                    _ => panic!("unexpected value for pixel"),
+                self.pixels[idx] = match (self.pixels[idx], bits[i_y][i_x]) {
+                    (Pixel::On, true) => {
+                        collision_flag = true;
+                        Pixel::Off
+                    }
+                    (Pixel::Off, false) => Pixel::Off,
+                    (Pixel::On, false) => Pixel::On,
+                    (Pixel::Off, true) => Pixel::On,
                 };
             }
         }
+        collision_flag
     }
 
     fn to_bool_array(bits: &u8) -> [bool; 8] {
@@ -106,7 +114,7 @@ impl Display {
         for i in 0..8 {
             bool_array[i] = ((bits >> (7 - i)) & 1) != 0;
         }
-        
+
         bool_array
     }
 
@@ -178,6 +186,25 @@ impl fmt::Display for Display {
         Ok(())
     }
 }
+
+pub static FONT_SET: [u8; 80] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
 
 #[cfg(test)]
 mod display_tests {

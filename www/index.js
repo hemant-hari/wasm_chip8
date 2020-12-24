@@ -1,15 +1,26 @@
 import { Cpu, Pixel, Display } from "wasm-chip8";
 import { memory } from "wasm-chip8/wasm_chip8_bg";
+import { cpu_execute_cycle } from "wasm-chip8/wasm_chip8_bg.wasm";
 
-const CELL_SIZE = 10; // px
+const CELL_SIZE = 20; // px
 const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#333333";
 const ALIVE_COLOR = "#41FF00";
 
 // Construct the display, and get its width and height.
-const chip8 = Display.new_default();
-const width = chip8.width();
-const height = chip8.height();
+const chip8 = Cpu.new();
+const width = 64;
+const height = 32;
+
+const programMemory = new Uint8Array(
+    memory.buffer,
+    chip8.get_memory(),
+    4096);
+
+const keyboardMemory = new Uint8Array(
+    memory.buffer,
+    chip8.get_keyboard(),
+    16);
 
 // Give the canvas room for all of our cells and a 1px border
 // around each of them.
@@ -20,8 +31,11 @@ canvas.width = (CELL_SIZE + 1) * width + 1;
 const ctx = canvas.getContext('2d');
 
 const renderLoop = () => {
-  chip8.tick();
+  for (let i=0; i < 6; i++){
+    chip8.execute_cycle(Math.floor(Math.random() * (0x100)));
+  }
 
+  chip8.decrement_timers();
   drawGrid();
   drawCells();
 
@@ -52,7 +66,7 @@ const getIndex = (row, column) => {
 };
 
 const drawCells = () => {
-  const cellsPtr = chip8.pixels();
+  const cellsPtr = chip8.get_display();
   const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
 
   ctx.beginPath();
@@ -77,29 +91,54 @@ const drawCells = () => {
   ctx.stroke();
 };
 
-renderLoop();
-
-
-var rightPressed = false;
-var leftPressed = false;
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
 function keyDownHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight" || e.key == "d") {
-        rightPressed = true;
-    }
-    else if(e.key == "Left" || e.key == "ArrowLeft" || e.key == "a") {
-        leftPressed = true;
-    }
+  keyboardMemory[keyMappings[e.key]] = 1;
 }
 
 function keyUpHandler(e) {
-    if(e.key == "Right" || e.key == "ArrowRight" || e.key == "d") {
-        rightPressed = false;
-    }
-    else if(e.key == "Left" || e.key == "ArrowLeft" || e.key == "a") {
-        leftPressed = false;
-    }
+    keyboardMemory[keyMappings[e.key]] = 0;
 }
+
+const keyMappings = {
+  '1': 1,
+  '2': 2,
+  '3': 3,
+  '4': 0xC,
+  'q': 4,
+  'w': 5,
+  'e': 6,
+  'r': 0xD,
+  'a': 7,
+  's': 8,
+  'd': 9,
+  'f': 0xE,
+  'z': 0xA,
+  'x': 0,  
+  'c': 0xB,  
+  'v': 0xF,
+}
+
+function readSingleFile(e) {
+  var file = e.target.files[0];
+  if (!file) {
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var buffer = e.target.result;
+    console.log(new Uint8Array(buffer));
+    const rom = new DataView(buffer, 0, buffer.byteLength);
+    chip8.reset();
+    for (let i = 0; i < rom.byteLength; i++) {
+      programMemory[0x200 + i] = rom.getUint8(i);
+    }
+    renderLoop();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('file-input').addEventListener('change', readSingleFile, false);
