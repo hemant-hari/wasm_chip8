@@ -15,7 +15,7 @@ fn load() -> io::Result<()> {
     cpu.load_memory(buffer);
 
     for _ in 0..3000 {
-        cpu.execute_cycle();
+        cpu.execute_cycle(10);
     }
 
     cpu.print_display();

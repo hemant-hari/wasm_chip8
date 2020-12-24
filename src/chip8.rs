@@ -550,7 +550,8 @@ mod cpu_tests {
     #[test]
     fn it_skips_instruction_if_key_pressed() {
         let mut cpu = Cpu::new();
-        cpu.keyboard.set_key(0xC);
+        cpu.registers[0xC] = 0xF;
+        cpu.keyboard.set_key(0xF);
         cpu.pc = 10;
         cpu.run_opcode(0xEC9E);
         assert_eq!(cpu.pc, 12);

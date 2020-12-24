@@ -12,7 +12,9 @@ impl Keyboard {
     }
 
     pub fn reset_keys(&mut self) {
-        self.keys = [0; 16]
+        for i in 0..16 {
+            self.keys[i] = 0;
+        }        
     }
 
     pub fn get_internal_array(&self) -> *const u8 {
